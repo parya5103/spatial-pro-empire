@@ -16,20 +16,32 @@ class SovereignAgent:
                 json={"contents": [{"parts": [{"text": prompt}]}]})
                 res.raise_for_status()
                 return res.json()['candidates'][0]['content']['parts'][0]['text']
-            except:
+            except Exception as e:
+                logging.error(f"Retry {i+1} due to {e}")
                 time.sleep(self.BACKOFF ** (i+1))
         return None
 
     def run(self):
-        topic = self.call("Trending topic in Spatial Computing. Title only.")
-        content = self.call(f"Write a 1500-word SEO blog post in Markdown for '{topic}'.")
+        topic = self.call("Suggest a specific trending topic in Spatial Computing. Title only.")
+        if not topic: return
+        content = self.call(f"Write a 1200-word SEO blog post in Markdown for '{topic}'. Include H2 headers.")
         if not content: return
+        
         path = f"app/blog/{topic.lower().replace(' ', '-')[:20]}.md"
-        headers = {"Authorization": f"token {self.token}"}
-        sha = requests.get(f"https://api.github.com/repos/{self.repo}/contents/{path}", headers=headers).json().get('sha')
-        requests.put(f"https://api.github.com/repos/{self.repo}/contents/{path}", 
-            json={"message": f"Auto-Update: {topic}", "content": base64.b64encode(content.encode()).decode(), "sha": sha} if sha else {"message": f"Auto-Update: {topic}", "content": base64.b64encode(content.encode()).decode()},
-            headers=headers)
+        headers = {"Authorization": f"token {self.token}", "Accept": "application/vnd.github.v3+json"}
+        
+        sha = None
+        r = requests.get(f"https://api.github.com/repos/{self.repo}/contents/{path}", headers=headers)
+        if r.status_code == 200: sha = r.json().get('sha')
+
+        payload = {
+            "message": f"Auto-Update: {topic}",
+            "content": base64.b64encode(content.encode()).decode(),
+            "branch": "main"
+        }
+        if sha: payload["sha"] = sha
+        
+        requests.put(f"https://api.github.com/repos/{self.repo}/contents/{path}", json=payload, headers=headers)
 
 if __name__ == "__main__":
     SovereignAgent().run()
