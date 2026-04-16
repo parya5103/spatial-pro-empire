@@ -1,0 +1,1 @@
+export const SEO = { title: 'Spatial Pro Empire', description: 'Next-gen spatial computing portal.' };
