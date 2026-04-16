@@ -1,0 +1,1 @@
+export default function Blog() { return <div className='p-20 bg-slate-950 min-h-screen text-white'><h1>Spatial Pro Archive</h1><p>Automated articles arriving via Agent Pipeline.</p></div> }
